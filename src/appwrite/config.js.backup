@@ -1,0 +1,202 @@
+WITHOUT DEBUG
+
+
+
+
+// import conf from "../conf/conf.js";
+// import { Client, ID, Databases, Storage, Query } from "appwrite";
+
+// export class Service {
+//   client = new Client();
+//   databases;
+//   bucket;
+
+//   constructor() {
+//     this.client
+//       .setEndpoint(conf.appwriteURL)
+//       .setProject(conf.appwriteProjectId);
+//     this.databases = new Databases(this.client);
+//     this.bucket = new Storage(this.client);
+//   }
+
+//   validateConfig() {
+//     if (
+//       !conf?.appwriteDatabaseId ||
+//       !conf?.appwriteCollectionId ||
+//       !conf?.appwriteURL ||
+//       !conf?.appwriteProjectId
+//     ) {
+//       throw new Error("Appwrite configuration is invalid or incomplete");
+//     }
+//   }
+
+//   async createPost({ title, slug, content, featuredImage, status, userId }) {
+//     this.validateConfig();
+//     return await this.databases.createDocument(
+//       conf.appwriteDatabaseId,
+//       conf.appwriteCollectionId,
+//       ID.unique(),
+//       { title, slug, content, featuredImage, status, userId }
+//     );
+//   }
+
+//   async updatePost(
+//     documentId,
+//     { title, content, featuredImage, status, slug }
+//   ) {
+//     this.validateConfig();
+//     if (!documentId) throw new Error("Document ID is required");
+//     return await this.databases.updateDocument(
+//       conf.appwriteDatabaseId,
+//       conf.appwriteCollectionId,
+//       documentId,
+//       { title, content, featuredImage, status, slug }
+//     );
+//   }
+
+//   async deletePost(documentId) {
+//     this.validateConfig();
+//     if (!documentId) throw new Error("Document ID is required");
+//     await this.databases.deleteDocument(
+//       conf.appwriteDatabaseId,
+//       conf.appwriteCollectionId,
+//       documentId
+//     );
+//     return true;
+//   }
+
+//   async getPost(identifier) {
+//     this.validateConfig();
+//     if (!identifier) throw new Error("Identifier is required");
+
+//     // Try to get by document ID
+//     if (identifier.length >= 20) {
+//       try {
+//         return await this.databases.getDocument(
+//           conf.appwriteDatabaseId,
+//           conf.appwriteCollectionId,
+//           identifier
+//         );
+//       } catch (error) {
+//         if (error.code !== 404 && error.type !== "document_not_found") {
+//           throw error;
+//         }
+//       }
+//     }
+
+//     // Try to get by slug
+//     const response = await this.databases.listDocuments(
+//       conf.appwriteDatabaseId,
+//       conf.appwriteCollectionId,
+//       [Query.equal("slug", identifier)]
+//     );
+
+//     return response?.documents?.[0] || null;
+//   }
+
+//   async getPostById(documentId) {
+//     this.validateConfig();
+//     if (!documentId) throw new Error("Document ID is required");
+//     try {
+//       return await this.databases.getDocument(
+//         conf.appwriteDatabaseId,
+//         conf.appwriteCollectionId,
+//         documentId
+//       );
+//     } catch (error) {
+//       if (error.code === 404 || error.type === "document_not_found")
+//         return null;
+//       throw error;
+//     }
+//   }
+
+//   async getPostBySlug(slug) {
+//     this.validateConfig();
+//     if (!slug) throw new Error("Slug is required");
+
+//     const response = await this.databases.listDocuments(
+//       conf.appwriteDatabaseId,
+//       conf.appwriteCollectionId,
+//       [Query.equal("slug", slug)]
+//     );
+
+//     return response?.documents?.[0] || null;
+//   }
+
+//   async getPosts(queries = [Query.equal("status", "active")]) {
+//     this.validateConfig();
+//     return await this.databases.listDocuments(
+//       conf.appwriteDatabaseId,
+//       conf.appwriteCollectionId,
+//       queries
+//     );
+//   }
+
+//   async uploadFile(file) {
+//     this.validateConfig();
+//     if (!file) throw new Error("File is required");
+//     if (!conf.appwriteBucketId) throw new Error("Bucket ID is missing");
+//     return await this.bucket.createFile(
+//       conf.appwriteBucketId,
+//       ID.unique(),
+//       file
+//     );
+//   }
+
+//   async deleteFile(fileId) {
+//     this.validateConfig();
+//     if (!fileId) throw new Error("File ID is required");
+//     if (!conf.appwriteBucketId) throw new Error("Bucket ID is missing");
+//     await this.bucket.deleteFile(conf.appwriteBucketId, fileId);
+//     return true;
+//   }
+
+//   getFileView(fileId) {
+//     this.validateConfig();
+//     if (!fileId || !conf.appwriteBucketId) {
+//       throw new Error("File ID or Bucket ID is missing");
+//     }
+//     return this.bucket.getFileView(conf.appwriteBucketId, fileId);
+//   }
+
+//   getFileDownload(fileId) {
+//     this.validateConfig();
+//     if (!fileId || !conf.appwriteBucketId) {
+//       throw new Error("File ID or Bucket ID is missing");
+//     }
+//     return this.bucket.getFileDownload(conf.appwriteBucketId, fileId);
+//   }
+
+//   async debugListPosts(limit = 10) {
+//     this.validateConfig();
+//     return await this.databases.listDocuments(
+//       conf.appwriteDatabaseId,
+//       conf.appwriteCollectionId,
+//       [Query.limit(limit)]
+//     );
+//   }
+
+//   async testConnection() {
+//     try {
+//       this.validateConfig();
+//       const testResponse = await this.databases.listDocuments(
+//         conf.appwriteDatabaseId,
+//         conf.appwriteCollectionId,
+//         [Query.limit(1)]
+//       );
+//       return {
+//         success: true,
+//         message: "Connection test passed",
+//         totalDocuments: testResponse.total,
+//       };
+//     } catch (error) {
+//       return {
+//         success: false,
+//         message: error.message,
+//       };
+//     }
+//   }
+// }
+
+// const service = new Service();
+// export default service;
