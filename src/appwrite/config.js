@@ -1,9 +1,10 @@
 import conf from "../conf/conf.js";
-import { Client, ID, Databases, Storage, Query } from "appwrite";
+import { Client, ID, Databases, Storage, Query, Account } from "appwrite";
 
 export class Service {
   client = new Client();
   databases;
+  account;
   bucket;
 
   constructor() {
@@ -19,6 +20,7 @@ export class Service {
       .setEndpoint(conf.appwriteURL)
       .setProject(conf.appwriteProjectId);
     this.databases = new Databases(this.client);
+    this.account = new Account(this.client);
     this.bucket = new Storage(this.client);
   }
 
@@ -124,77 +126,108 @@ export class Service {
       return false;
     }
   }
-
-  async getPost(identifier) {
+async getPost(identifier) {
+  try {
+    this.validateConfig();
+    
+    // Auth check (optional based on your needs)
     try {
-      this.validateConfig();
-
-      console.log("=== getPost Debug Info ===");
-      console.log("Identifier received:", identifier);
-      console.log("Identifier type:", typeof identifier);
-      console.log("Identifier length:", identifier?.length);
-      console.log("Using Database ID:", conf.appwriteDatabaseId);
-      console.log("Using Collection ID:", conf.appwriteCollectionId);
-
-      if (!identifier) {
-        throw new Error("Identifier parameter is required");
+      await this.account.get();
+    } catch (authError) {
+      // Only throw if you require authentication for all posts
+      if (this.requiresAuth) {
+        throw new Error("Please log in to view this post.");
       }
+    }
 
-      // First, try to get the document by ID (Appwrite document IDs are typically 20 characters)
-      if (identifier.length >= 20) {
-        try {
-          console.log("Attempting to get document by ID:", identifier);
-          const document = await this.databases.getDocument(
-            conf.appwriteDatabaseId,
-            conf.appwriteCollectionId,
-            identifier
-          );
-          console.log("✓ Document found by ID:", document.$id);
-          return document;
-        } catch (idError) {
-          console.log("Failed to get by ID:", idError.message);
-          // If error is not 404, throw it
-          if (idError.code !== 404 && idError.type !== "document_not_found") {
-            throw idError;
-          }
-          // If 404, continue to try by slug field
+    console.log("=== getPost Debug Info ===");
+    console.log("Identifier received:", identifier);
+    console.log("Identifier type:", typeof identifier);
+    console.log("Identifier length:", identifier?.length);
+    console.log("Using Database ID:", conf.appwriteDatabaseId);
+    console.log("Using Collection ID:", conf.appwriteCollectionId);
+
+    if (!identifier || identifier.trim() === '') {
+      throw new Error("Valid identifier parameter is required");
+    }
+
+    const cleanIdentifier = identifier.trim();
+
+    // Try by ID first (Appwrite document IDs are exactly 20 characters)
+    if (cleanIdentifier.length === 20) {
+      try {
+        console.log("Attempting to get document by ID:", cleanIdentifier);
+        const document = await this.databases.getDocument(
+          conf.appwriteDatabaseId,
+          conf.appwriteCollectionId,
+          cleanIdentifier
+        );
+        console.log("✓ Document found by ID:", document.$id);
+        return document;
+      } catch (idError) {
+        console.log("Failed to get by ID:", idError.message);
+        
+        // Check for specific error types
+        if (idError.code === 404 || idError.type === "document_not_found") {
+          console.log("Document not found by ID, trying slug...");
+        } else if (idError.code === 401) {
+          throw new Error("Authentication required to access this post");
+        } else {
+          // For other errors, might still want to try slug
+          console.log("Other error occurred, trying slug...");
         }
       }
+    }
 
-      // If not found by ID, try by slug field
-      console.log("Attempting to get document by slug field:", identifier);
+    // Try by slug field
+    console.log("Attempting to get document by slug field:", cleanIdentifier);
+    
+    try {
       const response = await this.databases.listDocuments(
         conf.appwriteDatabaseId,
         conf.appwriteCollectionId,
-        [Query.equal("slug", identifier)]
+        [Query.equal("slug", cleanIdentifier)]
       );
 
       console.log("Slug search - Total documents:", response?.total);
-      console.log(
-        "Slug search - Documents array length:",
-        response?.documents?.length
-      );
+      console.log("Slug search - Documents array length:", response?.documents?.length);
 
       if (response?.documents?.length > 0) {
         console.log("✓ Document found by slug:", response.documents[0].$id);
         return response.documents[0];
-      } else {
-        console.warn("❌ No post found for identifier:", identifier);
-        return null;
       }
-    } catch (error) {
-      console.error("=== getPost Error ===");
-      console.error("Error message:", error.message);
-      console.error("Error code:", error.code);
-      console.error("Error type:", error.type);
-
-      // Re-throw the error with more context
-      throw new Error(
-        `Failed to get post with identifier "${identifier}": ${error.message}`
-      );
+      
+      console.warn("❌ No post found for identifier:", cleanIdentifier);
+      return null;
+      
+    } catch (slugError) {
+      console.error("Error searching by slug:", slugError.message);
+      
+      if (slugError.code === 401) {
+        throw new Error("Authentication required to search posts");
+      }
+      
+      throw slugError;
     }
-  }
 
+  } catch (error) {
+    console.error("=== getPost Error ===");
+    console.error("Error message:", error.message);
+    console.error("Error code:", error.code);
+    console.error("Error type:", error.type);
+    console.error("Full error:", error);
+
+    // Don't wrap already meaningful errors
+    if (error.message.includes("Please log in") || 
+        error.message.includes("Authentication required") ||
+        error.message.includes("Valid identifier parameter")) {
+      throw error;
+    }
+
+    // Re-throw with context for other errors
+    throw new Error(`Failed to get post with identifier "${identifier}": ${error.message}`);
+  }
+}
   async getPostById(documentId) {
     try {
       this.validateConfig();
@@ -246,7 +279,9 @@ export class Service {
   async getPosts(queries = [Query.equal("status", "active")]) {
     try {
       this.validateConfig();
-
+      await this.account.get().catch(() => {
+        throw new Error("Please log in to view this post.");
+      });
       return await this.databases.listDocuments(
         conf.appwriteDatabaseId,
         conf.appwriteCollectionId,

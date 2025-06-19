@@ -33,8 +33,21 @@ function Home() {
 
         if (!isMounted) return;
 
-        setError("Failed to load posts");
-        setPosts([]);
+        // Check if error is due to authentication
+        const isAuthError =
+          error.code === 401 ||
+          error.message.includes("log in") ||
+          error.message.includes("authentication") ||
+          error.message.includes("unauthorized");
+
+        if (isAuthError && !authStatus) {
+          // Don't set error for unauthenticated users, just show empty posts
+          setPosts([]);
+        } else {
+          // Set error for other issues
+          setError("Failed to load posts. Please try again.");
+          setPosts([]);
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -42,12 +55,20 @@ function Home() {
       }
     };
 
-    fetchPosts();
+    // Only fetch posts if user is authenticated
+    if (authStatus) {
+      fetchPosts();
+    } else {
+      // If not authenticated, just stop loading
+      setLoading(false);
+      setPosts([]);
+      setError(null);
+    }
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [authStatus]);
 
   // Loading state
   if (loading) {
@@ -65,23 +86,39 @@ function Home() {
     );
   }
 
-  // Error state
-  if (error) {
+  // Show login message if not authenticated
+  if (!authStatus) {
     return (
       <div className="w-full py-8 mt-4 text-center">
         <Container>
           <div className="flex flex-wrap">
             <div className="p-2 w-full">
-              <h1 className="text-2xl font-bold text-red-600 mb-4">
-                Error Loading Posts
-              </h1>
-              <p className="text-gray-700 mb-4">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Try Again
-              </button>
+              <div className="max-w-md mx-auto">
+                <div className="text-6xl mb-6">📝</div>
+                <h1 className="text-3xl font-bold text-gray-800 mb-4">
+                  Welcome to Our Blog
+                </h1>
+                <p className="text-lg text-gray-600 mb-6">
+                  Please sign in to read the latest posts and join our community
+                </p>
+                <div className="space-y-3">
+                  <a
+                    href="/login"
+                    className="inline-block px-6 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Sign In
+                  </a>
+                  <div className="text-sm text-gray-500">
+                    Don't have an account?{" "}
+                    <a
+                      href="/signup"
+                      className="text-blue-500 hover:text-blue-600 font-medium"
+                    >
+                      Sign up here
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Container>
@@ -89,21 +126,55 @@ function Home() {
     );
   }
 
-  // No posts state
+  // Error state (only for authenticated users)
+  if (error) {
+    return (
+      <div className="w-full py-8 mt-4 text-center">
+        <Container>
+          <div className="flex flex-wrap">
+            <div className="p-2 w-full">
+              <div className="max-w-md mx-auto">
+                <div className="text-6xl mb-6">⚠️</div>
+                <h1 className="text-2xl font-bold text-red-600 mb-4">
+                  Oops! Something went wrong
+                </h1>
+                <p className="text-gray-700 mb-6">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-6 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
+  // No posts state (for authenticated users)
   if (posts.length === 0) {
     return (
       <div className="w-full py-8 mt-4 text-center">
         <Container>
           <div className="flex flex-wrap">
             <div className="p-2 w-full">
-              <h1 className="text-2xl font-bold hover:text-gray-500">
-                {authStatus ? "No posts available" : "Login to read posts"}
-              </h1>
-              {!authStatus && (
-                <p className="text-gray-600 mt-2">
-                  Please sign in to view the latest posts
+              <div className="max-w-md mx-auto">
+                <div className="text-6xl mb-6">📖</div>
+                <h1 className="text-2xl font-bold text-gray-800 mb-4">
+                  No posts available yet
+                </h1>
+                <p className="text-gray-600 mb-6">
+                  Be the first to create a post and start sharing your thoughts!
                 </p>
-              )}
+                <a
+                  href="/add-post"
+                  className="inline-block px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  Create First Post
+                </a>
+              </div>
             </div>
           </div>
         </Container>
