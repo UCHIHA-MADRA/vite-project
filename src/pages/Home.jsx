@@ -111,7 +111,7 @@ function Home() {
                   <div className="text-sm text-gray-500">
                     Don't have an account?{" "}
                     <a
-                      href="/signup"
+                      href="/SignUp"
                       className="text-blue-500 hover:text-blue-600 font-medium"
                     >
                       Sign up here
